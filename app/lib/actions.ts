@@ -7,20 +7,41 @@ import postgres from "postgres";
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: "require" });
 
+export type State = {
+  message?: string;
+  errors?: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+  };
+};
+
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string(),
-  amount: z.coerce.number(),
-  status: z.enum(["paid", "pending"]),
+  customerId: z.string({ message: "Please select a customer." }),
+  amount: z.coerce.number().gt(0, "Please enter an amount greater than $0."),
+  status: z.enum(["paid", "pending"], {
+    message: "Please select an invoice status.",
+  }),
   date: z.string(),
 });
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 
-export async function createInvoice(formData: FormData) {
-  const { amount, customerId, status } = CreateInvoice.parse(
-    Object.fromEntries(formData)
-  );
+export async function createInvoice(
+  _: State,
+  formData: FormData
+): Promise<State> {
+  const validatedFields = CreateInvoice.safeParse(Object.fromEntries(formData));
+
+  if (!validatedFields.success) {
+    return {
+      message: "Missing Fields. Failed to Create Invoice.",
+      errors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+
+  const { amount, customerId, status } = validatedFields.data;
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split("T")[0];
 

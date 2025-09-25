@@ -1,3 +1,5 @@
+"use client";
+
 import { CustomerField } from "@/app/lib/definitions";
 import Link from "next/link";
 import {
@@ -7,11 +9,22 @@ import {
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/app/ui/button";
-import { createInvoice } from "@/app/lib/actions";
+import { createInvoice, State } from "@/app/lib/actions";
+import { useActionState, useEffect } from "react";
 
 export default function Form({ customers }: { customers: CustomerField[] }) {
+  const initialState: State = {};
+  const [state, formAction, pending] = useActionState(
+    createInvoice,
+    initialState
+  );
+
+  useEffect(() => {
+    if (state.message) alert(state.message);
+  }, [state]);
+
   return (
-    <form action={createInvoice}>
+    <form action={formAction}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
         {/* Customer Name */}
         <div className="mb-4">
@@ -36,6 +49,15 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
             </select>
             <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
           </div>
+          {state.errors?.customerId && (
+            <div className="mt-2 space-y-1">
+              {state.errors.customerId.map((error) => (
+                <p key={error} className="text-sm text-red-500">
+                  {error}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Invoice Amount */}
@@ -56,6 +78,15 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
               <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
           </div>
+          {state.errors?.amount && (
+            <div className="mt-2 space-y-1">
+              {state.errors.amount.map((error) => (
+                <p key={error} className="text-sm text-red-500">
+                  {error}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Invoice Status */}
@@ -96,6 +127,15 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
                 </label>
               </div>
             </div>
+            {state.errors?.status && (
+              <div className="mt-2 space-y-1">
+                {state.errors.status.map((error) => (
+                  <p key={error} className="text-sm text-red-500">
+                    {error}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </fieldset>
       </div>
@@ -106,7 +146,9 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
         >
           Cancel
         </Link>
-        <Button type="submit">Create Invoice</Button>
+        <Button disabled={pending} type="submit">
+          {pending ? "Creating..." : "Create Invoice"}
+        </Button>
       </div>
     </form>
   );
